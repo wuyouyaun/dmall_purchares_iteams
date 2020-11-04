@@ -1,0 +1,32 @@
+
+
+- config:
+    name: 用例描述demo
+
+- test:
+    name: 登录前置操作，返回登录需要的value值
+    request:
+      url: http://testdf-vc-basemanage.dmall.com.hk/retails
+      method: POST
+      data:
+        loginName: admin
+        loginPassword: Dmall@1234
+        retailId: ""
+      headers:
+        Content-Type: application/x-www-form-urlencoded;charset=UTF-8
+        Referer: http://testdf-vc.dmall.com.hk/
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0
+    validate:
+    - eq: [status_code, 200]
+    - eq: [content.code,0]
+    - eq: [content.message,":"操作成功"]
+
+
+
+
+
+
+
+
+
+

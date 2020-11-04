@@ -1,0 +1,1 @@
+DEBUG    api:annuals_contract.py:134 返回日志：{'success': False, 'errorMsg': '資源文件不存在', 'errorCode': '10000', 'data': None}

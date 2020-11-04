@@ -1,0 +1,2 @@
+[0;34m10:48:59  "D:\Dmall_project\case\DF_project\df_testlogin.py:37"   <Response [200]> 
+ [0m[0;32m2020-11-04 10:48:59 - api - "D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:43" - save_supplier_information - DEBUG -  返回日志：{"code":0,"data":{"bankAccountName":"銀行開戶名不能為空","basicAccount":"銀行基本戶帳號不能為空","taxpayerNumber":"納稅識別號不能為空"},"message":null,"succ":true}[0m

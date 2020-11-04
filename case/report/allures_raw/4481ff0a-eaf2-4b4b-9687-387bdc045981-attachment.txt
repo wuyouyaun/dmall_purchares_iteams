@@ -1,0 +1,5 @@
+[0;34m15:51:10  "D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:200"   time.struct_time(tm_year=2020, tm_mon=8, tm_mday=1, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=214, tm_isdst=-1) 
+ [0m[0;34m15:51:10  "D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:202"   1596211200000 
+ [0m[0;34m15:51:10  "D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:206"   time.struct_time(tm_year=2020, tm_mon=9, tm_mday=3, tm_hour=23, tm_min=59, tm_sec=59, tm_wday=3, tm_yday=247, tm_isdst=-1) 
+ [0m[0;34m15:51:10  "D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:208"   1599148799000 
+ [0m

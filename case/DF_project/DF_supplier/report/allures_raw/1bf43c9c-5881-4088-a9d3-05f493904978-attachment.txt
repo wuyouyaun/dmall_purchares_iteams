@@ -1,0 +1,4 @@
+[0;34m10:18:31  "D:\Dmall_project\case\DF_project\df_testlogin.py:37"   <Response [200]> 
+ [0m[0;32m2020-11-03 10:18:31 - api - "D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:171" - import_company - DEBUG -  返回日志: {'code': 0, 'data': None, 'message': '成功導入1條', 'succ': True}[0m
+[0;34m10:18:31  "D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:172"   {'code': 0, 'data': None, 'message': '成功導入1條', 'succ': True} 
+ [0m

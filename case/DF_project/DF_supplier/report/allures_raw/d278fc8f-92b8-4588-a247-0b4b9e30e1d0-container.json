@@ -1,0 +1,1 @@
+{"uuid": "38d32251-0fb4-4799-8b5a-3ebc51db5bd6", "children": ["1ebc07b6-af69-4194-9ea9-5d7eb0e0f86b"], "befores": [{"name": "delete_cards_infor", "status": "passed", "start": 1604369918144, "stop": 1604369918670}], "afters": [{"name": "delete_cards_infor::0", "status": "passed", "start": 1604369919051, "stop": 1604369919051}], "start": 1604369918144, "stop": 1604369919051}

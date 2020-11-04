@@ -1,0 +1,2 @@
+[0;34m10:48:58  "D:\Dmall_project\case\DF_project\df_testlogin.py:37"   <Response [200]> 
+ [0m[0;32m2020-11-04 10:48:58 - api - "D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:43" - save_supplier_information - DEBUG -  返回日志：{"code":0,"data":{"companyName":"公司名稱+銀行開戶名+銀行賬號重復,不允許新建公司信息"},"message":null,"succ":true}[0m

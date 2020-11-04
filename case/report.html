@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (extras.classList.contains("collapsed")) {
+            expandcollapse.classList.add("expander")
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    sort_column(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+
+        if (key_a == key_b) return 0;
+
+        if (reversed) {
+            return (key_a < key_b ? 1 : -1);
+        } else {
+            return (key_a > key_b ? 1 : -1);
+        }
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 02-Nov-2020 at 16:29:45 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v2.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>JAVA_HOME</td>
+        <td>C:\Program Files\Java\jdk1.8.0_20</td></tr>
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.9.0", "pytest": "6.1.2"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.18362-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"allure-pytest": "2.8.6", "html": "2.1.1", "metadata": "1.10.0", "repeat": "0.7.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.6.0</td></tr></table>
+    <h2>Summary</h2>
+    <p>80 tests ran in 32.00 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">72 passed</span>, <input checked="true" class="filter" data-test-result="skipped" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">4 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">8 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable numeric" col="duration">Duration</th>
+          <th>Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_add_company_information_02</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">df_login_xadmin = &lt;requests.sessions.Session object at 0x000002A655A4AEB8&gt;<br/><br/>    @allure.feature(&quot;供应商模块&quot;)<br/>    @allure.severity(&quot;normal&quot;)<br/>    @allure.title(&quot;验证公司名稱+銀行開戶名+銀行賬號重復，公司信息无法新增&quot;)<br/>    # @allure.testcase(&quot;&quot;)<br/>    def test_add_company_information_02(df_login_xadmin):<br/>        &#x27;&#x27;&#x27;<br/>        当公司名稱+銀行開戶名+銀行賬號重復,不允許新建公司信息<br/>        &#x27;&#x27;&#x27;<br/>        s = df_login_xadmin<br/>        add_company = save_supplier_information(s, taxpayerType=&quot;Z1&quot;, companyName=&quot;深圳大源源呐901&quot;, legalPeople=&quot;大源源&quot;,<br/>                                                companyAddress=&quot;2222&quot;, taxpayerNumber=&quot;111111111111111&quot;, bankCode=&quot;1111111111&quot;,<br/>                                                simpleName=&quot;11111&quot;, basicAccount=&quot;11111111112&quot;,<br/>                                                bankName=&quot;建行&quot;,bankAccountName=&quot;建行西丽分行1&quot;)<br/>    <br/>&gt;       assert add_company[&#x27;companyName&#x27;] == &#x27;公司名稱+銀行開戶名+銀行賬號重復,不允許新建公司信息&#x27;<br/><span class="error">E       KeyError: &#x27;companyName&#x27;</span><br/><br/>DF_project\DF_supplier\test_supplier.py:92: KeyError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_approve_supplier_card</td>
+          <td class="col-duration">0.43</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">df_login_xadmin = &lt;requests.sessions.Session object at 0x000002A655A4AEB8&gt;, delete_cards_infor = None<br/><br/>    def test_approve_supplier_card(df_login_xadmin,delete_cards_infor):<br/>        &#x27;&#x27;&#x27;<br/>        验证审核有效性<br/>        &#x27;&#x27;&#x27;<br/>        s = df_login_xadmin<br/>        DF_Login(s)<br/>        add_supplier_cards(s)<br/>        approve = approve_supplier_card(s)<br/>&gt;       assert approve[&#x27;data&#x27;] == &#x27;審批完成&#x27;<br/><span class="error">E       AssertionError: assert None == &#x27;審批完成&#x27;</span><br/><br/>DF_project\DF_supplier\test_supplier.py:261: AssertionError<br/> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:37  &quot;D:\Dmall_project\case\VC_project\connect_mysql.py:46&quot;   操作异常: (1054, &quot;Unknown column &#x27;supplier_code&#x27; in &#x27;where clause&#x27;&quot;) 
+ [0m[0;34m16:29:37  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:31&quot;   9999 
+ [0m[0;34m16:29:37  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:32&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:37  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_check_pdf_list::test_check_pdf_37</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;case.VC_project.Annual_contract.test_annual_contract.Test_check_pdf_list object at 0x000002A655B91FD0&gt;<br/>login_xadmin = &lt;requests.sessions.Session object at 0x000002A655B2B898&gt;<br/><br/>    def test_check_pdf_37(self,login_xadmin):<br/>        &#x27;&#x27;&#x27;<br/>        存在有效的合同编号，点击预览，prd存在<br/>        &#x27;&#x27;&#x27;<br/>        s = login_xadmin<br/>        pdf_01 = check_pdf(s, contractNo=20090900006)<br/>&gt;       assert pdf_01[&#x27;success&#x27;] == True<br/><span class="error">E       assert False == True</span><br/><br/>VC_project\Annual_contract\test_annual_contract.py:437: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_check_pdf_list::test_preview_pdf_40</td>
+          <td class="col-duration">0.11</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;case.VC_project.Annual_contract.test_annual_contract.Test_check_pdf_list object at 0x000002A655B91EB8&gt;<br/>login_xadmin = &lt;requests.sessions.Session object at 0x000002A655B2B898&gt;<br/><br/>    def test_preview_pdf_40(self, login_xadmin):                 # 合同预览 prd预览<br/>        &#x27;&#x27;&#x27;<br/>        存在有效的合同编号，点击预览，预览prd<br/>        &#x27;&#x27;&#x27;<br/>        s = login_xadmin<br/>&gt;       preview_pdf(s,contractNo=20091500002)<br/><br/>VC_project\Annual_contract\test_annual_contract.py:466: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>VC_project\Annual_contract\annuals_contract.py:150: in preview_pdf<br/>    logger.debug(&quot;返回日志：%s&quot; % r.json())<br/>d:\python3\lib\site-packages\requests\models.py:898: in json<br/>    return complexjson.loads(self.text, **kwargs)<br/>d:\python3\lib\json\__init__.py:354: in loads<br/>    return _default_decoder.decode(s)<br/>d:\python3\lib\json\decoder.py:339: in decode<br/>    obj, end = self.raw_decode(s, idx=_w(s, 0).end())<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;json.decoder.JSONDecoder object at 0x000002A653DE6B38&gt;<br/>s = &#x27;&lt;!doctype html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;title&gt;HTTP Status 500 – Internal Server Error&lt;/title&gt;&lt;style type=&quot;text/css&quot;&gt;h1 ...e of the root cause is available in the server logs.&lt;/p&gt;&lt;hr class=&quot;line&quot; /&gt;&lt;h3&gt;Apache Tomcat/8.5.45&lt;/h3&gt;&lt;/body&gt;&lt;/html&gt;&#x27;<br/>idx = 0<br/><br/>    def raw_decode(self, s, idx=0):<br/>        &quot;&quot;&quot;Decode a JSON document from ``s`` (a ``str`` beginning with<br/>        a JSON document) and return a 2-tuple of the Python<br/>        representation and the index in ``s`` where the document ended.<br/>    <br/>        This can be used to decode a JSON document from a string that may<br/>        have extraneous data at the end.<br/>    <br/>        &quot;&quot;&quot;<br/>        try:<br/>            obj, end = self.scan_once(s, idx)<br/>        except StopIteration as err:<br/>&gt;           raise JSONDecodeError(&quot;Expecting value&quot;, s, err.value) from None<br/><span class="error">E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</span><br/><br/>d:\python3\lib\json\decoder.py:357: JSONDecodeError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_check_pdf_list::test_preview_pdf_41</td>
+          <td class="col-duration">0.10</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;case.VC_project.Annual_contract.test_annual_contract.Test_check_pdf_list object at 0x000002A655BA3B00&gt;<br/>login_xadmin = &lt;requests.sessions.Session object at 0x000002A655B2B898&gt;<br/><br/>    def test_preview_pdf_41(self,login_xadmin):<br/>        &#x27;&#x27;&#x27;<br/>        不存在的合同编号，点击预览，无法预览prd<br/>        &#x27;&#x27;&#x27;<br/>        s = login_xadmin<br/>&gt;       Pdf = preview_pdf(s, contractNo=&quot;&quot;)<br/><br/>VC_project\Annual_contract\test_annual_contract.py:479: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>VC_project\Annual_contract\annuals_contract.py:150: in preview_pdf<br/>    logger.debug(&quot;返回日志：%s&quot; % r.json())<br/>d:\python3\lib\site-packages\requests\models.py:898: in json<br/>    return complexjson.loads(self.text, **kwargs)<br/>d:\python3\lib\json\__init__.py:354: in loads<br/>    return _default_decoder.decode(s)<br/>d:\python3\lib\json\decoder.py:339: in decode<br/>    obj, end = self.raw_decode(s, idx=_w(s, 0).end())<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;json.decoder.JSONDecoder object at 0x000002A653DE6B38&gt;<br/>s = &#x27;&lt;!doctype html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;title&gt;HTTP Status 404 – Not Found&lt;/title&gt;&lt;style type=&quot;text/css&quot;&gt;h1 {font-family...ource or is not willing to disclose that one exists.&lt;/p&gt;&lt;hr class=&quot;line&quot; /&gt;&lt;h3&gt;Apache Tomcat/8.5.45&lt;/h3&gt;&lt;/body&gt;&lt;/html&gt;&#x27;<br/>idx = 0<br/><br/>    def raw_decode(self, s, idx=0):<br/>        &quot;&quot;&quot;Decode a JSON document from ``s`` (a ``str`` beginning with<br/>        a JSON document) and return a 2-tuple of the Python<br/>        representation and the index in ``s`` where the document ended.<br/>    <br/>        This can be used to decode a JSON document from a string that may<br/>        have extraneous data at the end.<br/>    <br/>        &quot;&quot;&quot;<br/>        try:<br/>            obj, end = self.scan_once(s, idx)<br/>        except StopIteration as err:<br/>&gt;           raise JSONDecodeError(&quot;Expecting value&quot;, s, err.value) from None<br/><span class="error">E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</span><br/><br/>d:\python3\lib\json\decoder.py:357: JSONDecodeError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_check_pdf_list::test_preview_pdf_42</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;case.VC_project.Annual_contract.test_annual_contract.Test_check_pdf_list object at 0x000002A655CC7CC0&gt;<br/>login_xadmin = &lt;requests.sessions.Session object at 0x000002A655B2B898&gt;<br/><br/>    def test_preview_pdf_42(self,login_xadmin):<br/>        &#x27;&#x27;&#x27;<br/>        不存在的合同编号，点击预览，无法预览prd<br/>        &#x27;&#x27;&#x27;<br/>        s=login_xadmin<br/>&gt;       pdf_02 = preview_pdf(s, contractNo=&quot;20091500034&quot;)<br/><br/>VC_project\Annual_contract\test_annual_contract.py:488: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>VC_project\Annual_contract\annuals_contract.py:150: in preview_pdf<br/>    logger.debug(&quot;返回日志：%s&quot; % r.json())<br/>d:\python3\lib\site-packages\requests\models.py:898: in json<br/>    return complexjson.loads(self.text, **kwargs)<br/>d:\python3\lib\json\__init__.py:354: in loads<br/>    return _default_decoder.decode(s)<br/>d:\python3\lib\json\decoder.py:339: in decode<br/>    obj, end = self.raw_decode(s, idx=_w(s, 0).end())<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;json.decoder.JSONDecoder object at 0x000002A653DE6B38&gt;<br/>s = &#x27;&lt;!doctype html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;title&gt;HTTP Status 500 – Internal Server Error&lt;/title&gt;&lt;style type=&quot;text/css&quot;&gt;h1 ...e of the root cause is available in the server logs.&lt;/p&gt;&lt;hr class=&quot;line&quot; /&gt;&lt;h3&gt;Apache Tomcat/8.5.45&lt;/h3&gt;&lt;/body&gt;&lt;/html&gt;&#x27;<br/>idx = 0<br/><br/>    def raw_decode(self, s, idx=0):<br/>        &quot;&quot;&quot;Decode a JSON document from ``s`` (a ``str`` beginning with<br/>        a JSON document) and return a 2-tuple of the Python<br/>        representation and the index in ``s`` where the document ended.<br/>    <br/>        This can be used to decode a JSON document from a string that may<br/>        have extraneous data at the end.<br/>    <br/>        &quot;&quot;&quot;<br/>        try:<br/>            obj, end = self.scan_once(s, idx)<br/>        except StopIteration as err:<br/>&gt;           raise JSONDecodeError(&quot;Expecting value&quot;, s, err.value) from None<br/><span class="error">E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</span><br/><br/>d:\python3\lib\json\decoder.py:357: JSONDecodeError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_check_pdf_list::test_preview_pdf_43</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;case.VC_project.Annual_contract.test_annual_contract.Test_check_pdf_list object at 0x000002A655D93B38&gt;<br/>login_xadmin = &lt;requests.sessions.Session object at 0x000002A655B2B898&gt;<br/><br/>    def test_preview_pdf_43(self,login_xadmin):<br/>        &#x27;&#x27;&#x27;<br/>        验证有效的合同号预览后可成功下载pdf<br/>        &#x27;&#x27;&#x27;<br/>        s=login_xadmin<br/>&gt;       preview_pdf(s, contractNo=&quot;20091500034&quot;)<br/><br/>VC_project\Annual_contract\test_annual_contract.py:497: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>VC_project\Annual_contract\annuals_contract.py:150: in preview_pdf<br/>    logger.debug(&quot;返回日志：%s&quot; % r.json())<br/>d:\python3\lib\site-packages\requests\models.py:898: in json<br/>    return complexjson.loads(self.text, **kwargs)<br/>d:\python3\lib\json\__init__.py:354: in loads<br/>    return _default_decoder.decode(s)<br/>d:\python3\lib\json\decoder.py:339: in decode<br/>    obj, end = self.raw_decode(s, idx=_w(s, 0).end())<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;json.decoder.JSONDecoder object at 0x000002A653DE6B38&gt;<br/>s = &#x27;&lt;!doctype html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;title&gt;HTTP Status 500 – Internal Server Error&lt;/title&gt;&lt;style type=&quot;text/css&quot;&gt;h1 ...e of the root cause is available in the server logs.&lt;/p&gt;&lt;hr class=&quot;line&quot; /&gt;&lt;h3&gt;Apache Tomcat/8.5.45&lt;/h3&gt;&lt;/body&gt;&lt;/html&gt;&#x27;<br/>idx = 0<br/><br/>    def raw_decode(self, s, idx=0):<br/>        &quot;&quot;&quot;Decode a JSON document from ``s`` (a ``str`` beginning with<br/>        a JSON document) and return a 2-tuple of the Python<br/>        representation and the index in ``s`` where the document ended.<br/>    <br/>        This can be used to decode a JSON document from a string that may<br/>        have extraneous data at the end.<br/>    <br/>        &quot;&quot;&quot;<br/>        try:<br/>            obj, end = self.scan_once(s, idx)<br/>        except StopIteration as err:<br/>&gt;           raise JSONDecodeError(&quot;Expecting value&quot;, s, err.value) from None<br/><span class="error">E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</span><br/><br/>d:\python3\lib\json\decoder.py:357: JSONDecodeError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_check_pdf_list::test_preview_pdf_44</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;case.VC_project.Annual_contract.test_annual_contract.Test_check_pdf_list object at 0x000002A655BB5DA0&gt;<br/>login_xadmin = &lt;requests.sessions.Session object at 0x000002A655B2B898&gt;<br/><br/>    def test_preview_pdf_44(self,login_xadmin):<br/>        &#x27;&#x27;&#x27;<br/>        验证有效的合同号预览后可成功下载pdf,且pdf为该合同号的pdf文本<br/>        &#x27;&#x27;&#x27;<br/>        s=login_xadmin<br/>&gt;       preview_pdf(s, contractNo=&quot;20091500034&quot;)<br/><br/>VC_project\Annual_contract\test_annual_contract.py:506: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>VC_project\Annual_contract\annuals_contract.py:150: in preview_pdf<br/>    logger.debug(&quot;返回日志：%s&quot; % r.json())<br/>d:\python3\lib\site-packages\requests\models.py:898: in json<br/>    return complexjson.loads(self.text, **kwargs)<br/>d:\python3\lib\json\__init__.py:354: in loads<br/>    return _default_decoder.decode(s)<br/>d:\python3\lib\json\decoder.py:339: in decode<br/>    obj, end = self.raw_decode(s, idx=_w(s, 0).end())<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>self = &lt;json.decoder.JSONDecoder object at 0x000002A653DE6B38&gt;<br/>s = &#x27;&lt;!doctype html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;title&gt;HTTP Status 500 – Internal Server Error&lt;/title&gt;&lt;style type=&quot;text/css&quot;&gt;h1 ...e of the root cause is available in the server logs.&lt;/p&gt;&lt;hr class=&quot;line&quot; /&gt;&lt;h3&gt;Apache Tomcat/8.5.45&lt;/h3&gt;&lt;/body&gt;&lt;/html&gt;&#x27;<br/>idx = 0<br/><br/>    def raw_decode(self, s, idx=0):<br/>        &quot;&quot;&quot;Decode a JSON document from ``s`` (a ``str`` beginning with<br/>        a JSON document) and return a 2-tuple of the Python<br/>        representation and the index in ``s`` where the document ended.<br/>    <br/>        This can be used to decode a JSON document from a string that may<br/>        have extraneous data at the end.<br/>    <br/>        &quot;&quot;&quot;<br/>        try:<br/>            obj, end = self.scan_once(s, idx)<br/>        except StopIteration as err:<br/>&gt;           raise JSONDecodeError(&quot;Expecting value&quot;, s, err.value) from None<br/><span class="error">E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</span><br/><br/>d:\python3\lib\json\decoder.py:357: JSONDecodeError<br/></div></td></tr></tbody>
+      <tbody class="skipped results-table-row">
+        <tr>
+          <td class="col-result">Skipped</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_05::setup</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">(&#x27;D:\\Dmall_project\\case\\VC_project\\Annual_contract\\test_annual_contract.py&#x27;, 49, &#x27;Skipped: 此处有个bug,按照查询条件的供商卡号查询只有登录的供应商&#x27;)<br/></div></td></tr></tbody>
+      <tbody class="skipped results-table-row">
+        <tr>
+          <td class="col-result">Skipped</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_28::setup</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">(&#x27;D:\\Dmall_project\\case\\VC_project\\Annual_contract\\test_annual_contract.py&#x27;, 333, &#x27;Skipped: unconditional skip&#x27;)<br/></div></td></tr></tbody>
+      <tbody class="skipped results-table-row">
+        <tr>
+          <td class="col-result">Skipped</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Contract_details::test_Contract_details_34::setup</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">(&#x27;D:\\Dmall_project\\case\\VC_project\\Annual_contract\\test_annual_contract.py&#x27;, 395, &#x27;Skipped: unconditional skip&#x27;)<br/></div></td></tr></tbody>
+      <tbody class="skipped results-table-row">
+        <tr>
+          <td class="col-result">Skipped</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_check_pdf_list::test_check_pdf_39::setup</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">(&#x27;D:\\Dmall_project\\case\\VC_project\\Annual_contract\\test_annual_contract.py&#x27;, 449, &#x27;Skipped: unconditional skip&#x27;)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_logins.py::test_login</td>
+          <td class="col-duration">0.11</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_save_supplier_information_01</td>
+          <td class="col-duration">0.98</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:17  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:17  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:17  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:17  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_add_company_information[新增公司档案，未填写公司名称,异常场景-新建失败]</td>
+          <td class="col-duration">0.11</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:18  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:73&quot;   1234444 
+ [0m[0;34m16:29:18  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:74&quot;   True 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_add_company_information[新增公司档案，未填写銀行基本戶帳號,异常场景-新建失败]</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:18  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:73&quot;   1234444 
+ [0m[0;34m16:29:18  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:74&quot;   True 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_add_company_information[新增公司档案，未填写納稅識別號,异常场景-新建失败]</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:18  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:73&quot;   1234444 
+ [0m[0;34m16:29:18  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:74&quot;   True 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_add_company_information[新增公司档案，未填写銀行開戶名,异常场景-新建失败]</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:19  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:73&quot;   1234444 
+ [0m[0;34m16:29:19  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:74&quot;   True 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_check_supplier_information_03</td>
+          <td class="col-duration">0.40</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:19  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:19  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:19  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:20  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:57&quot;   --------- {&#x27;id&#x27;:11037} 
+ [0m[0;34m16:29:20  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:61&quot;   &lt;class &#x27;str&#x27;&gt; 
+ [0m[0;34m16:29:20  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:75&quot;   123456 {&#x27;form_data&#x27;: &#x27;{&quot;id&quot;: 11037}&#x27;} 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[1.修改公司信息中纳税类型, 修改成功]</td>
+          <td class="col-duration">0.39</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:20  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:20  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:20  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:20  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11038 
+ [0m[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z2&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11038, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z2&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11038, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z2&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11038,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z2&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11038,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[2.修改公司信息中公司名称, 修改成功]</td>
+          <td class="col-duration">0.43</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:21  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11039 
+ [0m[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐998&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11039, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450998&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11039, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450998&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11039,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450998&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11039,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[3.修改公司信息中修改法人, 修改成功]</td>
+          <td class="col-duration">0.39</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:22  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11040 
+ [0m[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源1&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11040, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e901&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11040, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e901&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11040,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e901&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11040,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[4.修改公司信息中修改公司地址, 修改成功]</td>
+          <td class="col-duration">0.42</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:23  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11041 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;333&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11041, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;333&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11041, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;333&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11041,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;333&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11041,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[5.修改公司信息中纳税人识别号, 修改成功]</td>
+          <td class="col-duration">0.41</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11042 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;77777777777777&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11042, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;77777777777777&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11042, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;77777777777777&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11042,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;77777777777777&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11042,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:24  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[6.修改公司信息中支行联行号, 修改成功]</td>
+          <td class="col-duration">0.53</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:25  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:25  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:25  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:25  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11043 
+ [0m[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;3333333333&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11043, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;3333333333&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11043, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;3333333333&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11043,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;3333333333&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11043,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[7.修改公司信息中公司简称, 修改成功]</td>
+          <td class="col-duration">0.41</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:26  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11044 
+ [0m[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;121212&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11044, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;121212&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11044, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;121212&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11044,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;121212&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11044,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[8.修改公司信息中银行账号, 修改成功]</td>
+          <td class="col-duration">0.38</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:27  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11045 
+ [0m[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;343434343434&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11045, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;343434343434&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11045, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;343434343434&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11045,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;343434343434&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11045,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[9.修改公司信息中开户银行, 修改成功]</td>
+          <td class="col-duration">0.41</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:28  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11046 
+ [0m[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;工商银行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11046, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5de5\u5546\u94f6\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11046, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5de5\u5546\u94f6\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11046,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5de5\\u5546\\u94f6\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11046,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[10.修改公司信息中開戶銀行名, 修改成功]</td>
+          <td class="col-duration">0.42</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:29  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11047 
+ [0m[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行南山分行&#x27;, &#x27;mainName&#x27;: &#x27;22222&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11047, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u5357\u5c71\u5206\u884c&quot;, &quot;mainName&quot;: &quot;22222&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11047, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u5357\u5c71\u5206\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11047,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u5357\\u5c71\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;22222&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11047,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[11.修改公司信息中公司联系人, 修改成功]</td>
+          <td class="col-duration">0.43</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:30  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:31  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11048 
+ [0m[0;34m16:29:31  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;大源子&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519920&#x27;, &#x27;id&#x27;: 11048, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:31  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;\u5927\u6e90\u5b50&quot;, &quot;mainPhone&quot;: &quot;18571519920&quot;, &quot;id&quot;: 11048, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:31  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;\u5927\u6e90\u5b50&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11048,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:31  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;\\u5927\\u6e90\\u5b50&quot;,&quot;mainPhone&quot;:&quot;18571519920&quot;,&quot;id&quot;:11048,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:31  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_supplier_infor_04[12.修改公司信息中公司联系人手机号, 修改成功]</td>
+          <td class="col-duration">0.43</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:31  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11&quot;   1111 
+ [0m[0;34m16:29:31  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:146&quot;   测试第一步 
+ [0m[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:90&quot;   11049 
+ [0m[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:107&quot;   @@@@@@@@@@@@@@  ---- {&#x27;taxpayerType&#x27;: &#x27;Z1&#x27;, &#x27;companyName&#x27;: &#x27;深圳大源源呐999&#x27;, &#x27;legalPeople&#x27;: &#x27;大源源&#x27;, &#x27;companyAddress&#x27;: &#x27;2222&#x27;, &#x27;taxpayerNumber&#x27;: &#x27;111111111111111&#x27;, &#x27;bankCode&#x27;: &#x27;1111111111&#x27;, &#x27;simpleName&#x27;: &#x27;11111&#x27;, &#x27;basicAccount&#x27;: &#x27;11111111111&#x27;, &#x27;bankName&#x27;: &#x27;建行&#x27;, &#x27;bankAccountName&#x27;: &#x27;建行西丽分行&#x27;, &#x27;mainName&#x27;: &#x27;大源子&#x27;, &#x27;mainPhone&#x27;: &#x27;18571519921&#x27;, &#x27;id&#x27;: 11049, &#x27;isUpdate&#x27;: &#x27;I&#x27;, &#x27;companyType&#x27;: &#x27;1&#x27;, &#x27;manageMode&#x27;: 1, &#x27;groupNo&#x27;: &#x27;GH000172&#x27;, &#x27;martCode&#x27;: &#x27;dfhk&#x27;, &#x27;statusStr&#x27;: &#x27;正常&#x27;, &#x27;companyTypeStr&#x27;: &#x27;商品類供應商&#x27;, &#x27;manageModeName&#x27;: &#x27;制造商&#x27;, &#x27;taxpayerTypeName&#x27;: &#x27;壹般納稅人(0;9%;13%)&#x27;, &#x27;source&#x27;: 2, &#x27;status&#x27;: 3, &#x27;ynDesc&#x27;: &#x27;有效&#x27;, &#x27;venderId&#x27;: 10032, &#x27;lastOptUser&#x27;: &#x27;有源[Dd00631483]&#x27;, &#x27;createdStr&#x27;: &#x27;2020-10-22 19:52:02&#x27;, &#x27;modifiedStr&#x27;: &#x27; 2020-10-22 19:52:02&#x27;, &#x27;created&#x27;: 1603367522000, &#x27;yn&#x27;: 1, &#x27;modified&#x27;: &#x27;1603367522000&#x27;} 
+ [0m[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:109&quot;   ######## ----- ---- {&quot;taxpayerType&quot;: &quot;Z1&quot;, &quot;companyName&quot;: &quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;, &quot;legalPeople&quot;: &quot;\u5927\u6e90\u6e90&quot;, &quot;companyAddress&quot;: &quot;2222&quot;, &quot;taxpayerNumber&quot;: &quot;111111111111111&quot;, &quot;bankCode&quot;: &quot;1111111111&quot;, &quot;simpleName&quot;: &quot;11111&quot;, &quot;basicAccount&quot;: &quot;11111111111&quot;, &quot;bankName&quot;: &quot;\u5efa\u884c&quot;, &quot;bankAccountName&quot;: &quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;, &quot;mainName&quot;: &quot;\u5927\u6e90\u5b50&quot;, &quot;mainPhone&quot;: &quot;18571519921&quot;, &quot;id&quot;: 11049, &quot;isUpdate&quot;: &quot;I&quot;, &quot;companyType&quot;: &quot;1&quot;, &quot;manageMode&quot;: 1, &quot;groupNo&quot;: &quot;GH000172&quot;, &quot;martCode&quot;: &quot;dfhk&quot;, &quot;statusStr&quot;: &quot;\u6b63\u5e38&quot;, &quot;companyTypeStr&quot;: &quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;, &quot;manageModeName&quot;: &quot;\u5236\u9020\u5546&quot;, &quot;taxpayerTypeName&quot;: &quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;, &quot;source&quot;: 2, &quot;status&quot;: 3, &quot;ynDesc&quot;: &quot;\u6709\u6548&quot;, &quot;venderId&quot;: 10032, &quot;lastOptUser&quot;: &quot;\u6709\u6e90[Dd00631483]&quot;, &quot;createdStr&quot;: &quot;2020-10-22 19:52:02&quot;, &quot;modifiedStr&quot;: &quot; 2020-10-22 19:52:02&quot;, &quot;created&quot;: 1603367522000, &quot;yn&quot;: 1, &quot;modified&quot;: &quot;1603367522000&quot;} 
+ [0m[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:111&quot;   111111 {&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\u6df1\u5733\u5927\u6e90\u6e90\u5450999&quot;,&quot;legalPeople&quot;:&quot;\u5927\u6e90\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\u5efa\u884c&quot;,&quot;bankAccountName&quot;:&quot;\u5efa\u884c\u897f\u4e3d\u5206\u884c&quot;,&quot;mainName&quot;:&quot;\u5927\u6e90\u5b50&quot;,&quot;mainPhone&quot;:&quot;18571519921&quot;,&quot;id&quot;:11049,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\u6b63\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\u5546\u54c1\u985e\u4f9b\u61c9\u5546&quot;,&quot;manageModeName&quot;:&quot;\u5236\u9020\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\u58f9\u822c\u7d0d\u7a05\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\u6709\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\u6709\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;} 
+ [0m[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:120&quot;   ---------- {&#x27;form_data&#x27;: &#x27;{&quot;taxpayerType&quot;:&quot;Z1&quot;,&quot;companyName&quot;:&quot;\\u6df1\\u5733\\u5927\\u6e90\\u6e90\\u5450999&quot;,&quot;legalPeople&quot;:&quot;\\u5927\\u6e90\\u6e90&quot;,&quot;companyAddress&quot;:&quot;2222&quot;,&quot;taxpayerNumber&quot;:&quot;111111111111111&quot;,&quot;bankCode&quot;:&quot;1111111111&quot;,&quot;simpleName&quot;:&quot;11111&quot;,&quot;basicAccount&quot;:&quot;11111111111&quot;,&quot;bankName&quot;:&quot;\\u5efa\\u884c&quot;,&quot;bankAccountName&quot;:&quot;\\u5efa\\u884c\\u897f\\u4e3d\\u5206\\u884c&quot;,&quot;mainName&quot;:&quot;\\u5927\\u6e90\\u5b50&quot;,&quot;mainPhone&quot;:&quot;18571519921&quot;,&quot;id&quot;:11049,&quot;isUpdate&quot;:&quot;I&quot;,&quot;companyType&quot;:&quot;1&quot;,&quot;manageMode&quot;:1,&quot;groupNo&quot;:&quot;GH000172&quot;,&quot;martCode&quot;:&quot;dfhk&quot;,&quot;statusStr&quot;:&quot;\\u6b63\\u5e38&quot;,&quot;companyTypeStr&quot;:&quot;\\u5546\\u54c1\\u985e\\u4f9b\\u61c9\\u5546&quot;,&quot;manageModeName&quot;:&quot;\\u5236\\u9020\\u5546&quot;,&quot;taxpayerTypeName&quot;:&quot;\\u58f9\\u822c\\u7d0d\\u7a05\\u4eba(0;9%;13%)&quot;,&quot;source&quot;:2,&quot;status&quot;:3,&quot;ynDesc&quot;:&quot;\\u6709\\u6548&quot;,&quot;venderId&quot;:10032,&quot;lastOptUser&quot;:&quot;\\u6709\\u6e90[Dd00631483]&quot;,&quot;createdStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;modifiedStr&quot;:&quot;2020-10-2219:52:02&quot;,&quot;created&quot;:1603367522000,&quot;yn&quot;:1,&quot;modified&quot;:&quot;1603367522000&quot;}&#x27;} 
+ [0m[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:121&quot;   &lt;class &#x27;dict&#x27;&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_supplier_infor_05[1.一页10条，第一页，查询公司档案列表, 成功 ]</td>
+          <td class="col-duration">0.26</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_supplier_infor_05[2.一页20条，第一页，查询公司档案列表, 成功 ]</td>
+          <td class="col-duration">0.25</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_supplier_infor_05[3.一页50条，第一页，查询公司档案列表, 成功 ]</td>
+          <td class="col-duration">0.26</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:32  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_supplier_infor_05[4.一页100条，第一页，查询公司档案列表, 成功 ]</td>
+          <td class="col-duration">0.25</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:33  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_supplier_infor_05[5.数据量足够时，一页10条，随机第3页，查询公司档案列表, 成功 ]</td>
+          <td class="col-duration">0.23</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:33  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_supplier_infor_05[6.数据量足够时，一页20条，随机第3页，查询公司档案列表, 成功 ]</td>
+          <td class="col-duration">0.23</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:33  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_supplier_infor_05[7.数据量足够时，一页50条，随机第3页，查询公司档案列表, 成功 ]</td>
+          <td class="col-duration">0.23</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:33  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_supplier_infor_05[8.数据量足够时，一页100条，随机第3页，查询公司档案列表, 成功 ]</td>
+          <td class="col-duration">0.23</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:34  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_supplier_infor_06</td>
+          <td class="col-duration">0.25</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:34  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_account_list_06</td>
+          <td class="col-duration">0.25</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:34  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_find_account_cards</td>
+          <td class="col-duration">0.23</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:34  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_update_account_information</td>
+          <td class="col-duration">0.24</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:35  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_card_list</td>
+          <td class="col-duration">0.36</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:35  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">DF_project/DF_supplier/test_supplier.py::test_add_aupplier</td>
+          <td class="col-duration">0.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:36  &quot;D:\Dmall_project\case\VC_project\connect_mysql.py:46&quot;   操作异常: (1054, &quot;Unknown column &#x27;supplier_code&#x27; in &#x27;where clause&#x27;&quot;) 
+ [0m[0;34m16:29:36  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:31&quot;   9999 
+ [0m[0;34m16:29:36  &quot;D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:32&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:36  &quot;D:\Dmall_project\case\DF_project\df_testlogin.py:37&quot;   &lt;Response [200]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_01</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:37  &quot;D:\Dmall_project\case\VC_project\VCtest_login.py:23&quot;   10039 
+ [0m[0;34m16:29:37  &quot;D:\Dmall_project\case\VC_project\VCtest_login.py:40&quot;   &lt;RequestsCookieJar[&lt;Cookie supplier_dmalltest=cYpjjcucycRiR1PBQt1fX1KN5zklVLeV0/HO8wPweuyYZm9ciSaVDjHlLTaLNMNzizo3ZhM0GzAvAy4HtXwv6rsFeB71TyGZwSGWmrZraFFkD6Vpbut97qzsrEikb6TDqjqLDZ1MfMAvPU9DfQBT22YF4NJuOx+evDI4328BFvQgnPoOXLrYmvUJGZTzw6xj+gVXfiycmYghnu7sEY67MIO+TlBguYepbsZV/14cd09W+/qR2EoKFLruW3/6rekXxYqLgkqkWaGPGB5obZe3uNk5XBAeuIZrK1vACIZRR5vG/OuUlOBHl2rlE2XjbHkHQlSTpGPboeoMvQEhgJ0Jig== for .dmall.com.hk/&gt;, &lt;Cookie venderId=10039 for .dmall.com.hk/&gt;]&gt; 
+ [0m[0;34m16:29:38  &quot;D:\Dmall_project\case\VC_project\VCtest_login.py:23&quot;   10039 
+ [0m[0;34m16:29:38  &quot;D:\Dmall_project\case\VC_project\VCtest_login.py:40&quot;   &lt;RequestsCookieJar[&lt;Cookie supplier_dmalltest=cYpjjcucycRiR1PBQt1fX1KN5zklVLeV0/HO8wPweuyYZm9ciSaVDjHlLTaLNMNzizo3ZhM0GzAvAy4HtXwv6rsFeB71TyGZwSGWmrZraFFkD6Vpbut97qzsrEikb6TDqjqLDZ1MfMAvPU9DfQBT22YF4NJuOx+evDI4328BFvQgnPoOXLrYmvUJGZTzw6xj+gVXfiycmYghnu7sEY67MIO+TlBguYepbsZV/14cd09eEtKl6/x/hEUeM6clRHkVvIAt+zrixyIKZuNw7qGgDNk5XBAeuIZrK1vACIZRR5vG/OuUlOBHl2rlE2XjbHkHQlSTpGPboeoMvQEhgJ0Jig== for .dmall.com.hk/&gt;, &lt;Cookie venderId=10039 for .dmall.com.hk/&gt;]&gt; 
+ [0m[0;34m16:29:38  &quot;D:\Dmall_project\case\VC_project\Annual_contract\conftest.py:15&quot;   {&#x27;code&#x27;: 0, &#x27;data&#x27;: True, &#x27;message&#x27;: &#x27;操作成功&#x27;, &#x27;succ&#x27;: True} 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_02</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_03</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_04</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_06</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_07</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_08</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_09</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_10</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_11</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_12</td>
+          <td class="col-duration">0.35</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:39  &quot;D:\Dmall_project\case\VC_project\VCtest_login.py:23&quot;   10039 
+ [0m[0;34m16:29:39  &quot;D:\Dmall_project\case\VC_project\VCtest_login.py:40&quot;   &lt;RequestsCookieJar[&lt;Cookie supplier_dmalltest=cYpjjcucycRiR1PBQt1fX1KN5zklVLeV0/HO8wPweuyYZm9ciSaVDjHlLTaLNMNzizo3ZhM0GzAvAy4HtXwv6rsFeB71TyGZwSGWmrZraFFkD6Vpbut97qzsrEikb6TDqjqLDZ1MfMAvPU9DfQBT22YF4NJuOx+evDI4328BFvQgnPoOXLrYmvUJGZTzw6xj+gVXfiycmYghnu7sEY67MIO+TlBguYepbsZV/14cd0+ylEzrKkbyKxp95Nq4pzwAUEeR0fNA9zipLNkOI9XshNk5XBAeuIZrK1vACIZRR5vG/OuUlOBHl2rlE2XjbHkHQlSTpGPboeoMvQEhgJ0Jig== for .dmall.com.hk/&gt;, &lt;Cookie venderId=10039 for .dmall.com.hk/&gt;]&gt; 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_13</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_14</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_15</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_16</td>
+          <td class="col-duration">0.14</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_17</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_18</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_19</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_20</td>
+          <td class="col-duration">0.14</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:40  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:200&quot;   time.struct_time(tm_year=2020, tm_mon=8, tm_mday=1, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=214, tm_isdst=-1) 
+ [0m[0;34m16:29:40  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:202&quot;   1596211200000 
+ [0m[0;34m16:29:40  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:206&quot;   time.struct_time(tm_year=2020, tm_mon=9, tm_mday=3, tm_hour=23, tm_min=59, tm_sec=59, tm_wday=3, tm_yday=247, tm_isdst=-1) 
+ [0m[0;34m16:29:40  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:208&quot;   1599148799000 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_21</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:40  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:220&quot;   time.struct_time(tm_year=2020, tm_mon=8, tm_mday=1, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=214, tm_isdst=-1) 
+ [0m[0;34m16:29:40  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:222&quot;   1596211200000 
+ [0m[0;34m16:29:40  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:226&quot;   time.struct_time(tm_year=2020, tm_mon=9, tm_mday=3, tm_hour=23, tm_min=59, tm_sec=59, tm_wday=3, tm_yday=247, tm_isdst=-1) 
+ [0m[0;34m16:29:40  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:228&quot;   1599148799000 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_22</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:240&quot;   time.struct_time(tm_year=2020, tm_mon=8, tm_mday=1, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=214, tm_isdst=-1) 
+ [0m[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:242&quot;   1596211200000 
+ [0m[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:246&quot;   time.struct_time(tm_year=2020, tm_mon=9, tm_mday=3, tm_hour=23, tm_min=59, tm_sec=59, tm_wday=3, tm_yday=247, tm_isdst=-1) 
+ [0m[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:248&quot;   1599148799000 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_23</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:261&quot;   time.struct_time(tm_year=2020, tm_mon=8, tm_mday=1, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=214, tm_isdst=-1) 
+ [0m[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:263&quot;   1596211200000 
+ [0m[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:267&quot;   time.struct_time(tm_year=2020, tm_mon=9, tm_mday=3, tm_hour=23, tm_min=59, tm_sec=59, tm_wday=3, tm_yday=247, tm_isdst=-1) 
+ [0m[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:269&quot;   1599148799000 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_24</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:281&quot;   time.struct_time(tm_year=2020, tm_mon=8, tm_mday=1, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=214, tm_isdst=-1) 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_25</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:300&quot;   time.struct_time(tm_year=2020, tm_mon=8, tm_mday=1, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=214, tm_isdst=-1) 
+ [0m[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:302&quot;   1596211200000 
+ [0m[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:306&quot;   time.struct_time(tm_year=2020, tm_mon=9, tm_mday=3, tm_hour=23, tm_min=59, tm_sec=59, tm_wday=3, tm_yday=247, tm_isdst=-1) 
+ [0m[0;34m16:29:41  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:308&quot;   1599148799000 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_26</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_27</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_29</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_30</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_31</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_32</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Ycontract_Listquire::test_Ycontract_Listquire_33</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Contract_details::test_Contract_details_35</td>
+          <td class="col-duration">0.11</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:42  &quot;D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:412&quot;   66666666 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_Contract_details::test_Contract_details_36</td>
+          <td class="col-duration">0.11</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Annual_contract/test_annual_contract.py::Test_check_pdf_list::test_check_pdf_38</td>
+          <td class="col-duration">0.11</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Supplier_vc/test_supplier.py::test_delete_register</td>
+          <td class="col-duration">0.25</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>[0;34m16:29:43  &quot;D:\Dmall_project\case\VC_project\VCtest_login.py:23&quot;   10039 
+ [0m[0;34m16:29:44  &quot;D:\Dmall_project\case\VC_project\VCtest_login.py:40&quot;   &lt;RequestsCookieJar[&lt;Cookie supplier_dmalltest=cYpjjcucycRiR1PBQt1fX1KN5zklVLeV0/HO8wPweuyYZm9ciSaVDjHlLTaLNMNzizo3ZhM0GzAvAy4HtXwv6rsFeB71TyGZwSGWmrZraFFkD6Vpbut97qzsrEikb6TDqjqLDZ1MfMAvPU9DfQBT22YF4NJuOx+evDI4328BFvQgnPoOXLrYmvUJGZTzw6xj+gVXfiycmYghnu7sEY67MIO+TlBguYepbsZV/14cd08P2okqSBrDVvaUO1mN9Tx01Vcy+wU8GivXPbrFqQBBuNk5XBAeuIZrK1vACIZRR5vG/OuUlOBHl2rlE2XjbHkHQlSTpGPboeoMvQEhgJ0Jig== for .dmall.com.hk/&gt;, &lt;Cookie venderId=10039 for .dmall.com.hk/&gt;]&gt; 
+ [0m[0;34m16:29:44  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\test_supplier.py:19&quot;   1111 
+ [0m[0;34m16:29:44  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\test_supplier.py:20&quot;   后置操作 
+ [0m<br/> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:45  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:40&quot;   1111 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Supplier_vc/test_supplier.py::test_company_cerifcation[0-expected0]</td>
+          <td class="col-duration">0.20</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:45  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:51&quot;   D:\Dmall_project\case\VC_project\Supplier_vc 
+ [0m[0;34m16:29:45  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:53&quot;   D:\Dmall_project\case\VC_project\Supplier_vc\ces.png 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Supplier_vc/test_supplier.py::test_company_cerifcation[1-expected1]</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:45  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:51&quot;   D:\Dmall_project\case\VC_project\Supplier_vc 
+ [0m[0;34m16:29:45  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:53&quot;   D:\Dmall_project\case\VC_project\Supplier_vc\ces.png 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Supplier_vc/test_supplier.py::test_company_cerifcation[2-expected2]</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:45  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:51&quot;   D:\Dmall_project\case\VC_project\Supplier_vc 
+ [0m[0;34m16:29:45  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:53&quot;   D:\Dmall_project\case\VC_project\Supplier_vc\ces.png 
+ [0m<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VC_project/Supplier_vc/test_supplier.py::test_company_cerifcation[3-expected3]</td>
+          <td class="col-duration">0.13</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[0;34m16:29:45  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:51&quot;   D:\Dmall_project\case\VC_project\Supplier_vc 
+ [0m[0;34m16:29:45  &quot;D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:53&quot;   D:\Dmall_project\case\VC_project\Supplier_vc\ces.png 
+ [0m<br/></div></td></tr></tbody></table></body></html>

@@ -1,0 +1,70 @@
+
+- config:
+    name: 登录用户描述
+    request:
+      base_url: http://testdf-vc-basemanage.dmall.com.hk
+
+- test:
+    name: 输入用户名，密码-成功获取登录前的value值
+    request:
+        url: /retails
+        method: POST
+        data:
+             loginName: admin
+             loginPassword: Dmall@1234
+             retailId: ""
+        headers:
+             Content-Type: application/x-www-form-urlencoded;charset=UTF-8
+             User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36
+                    (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+             Referer: http://testdf-vc.dmall.com.hk
+    extract:
+      - values: content.data.0.value
+    validate:
+    - eq:  [status_code,200]
+    - eq:  [content.code,0]
+    - eq:  [content.message,操作成功]
+    - eq:  [$values,0]
+#
+
+- test:
+    name: 登录成功，输入正确的用户名和密码
+    request:
+       url: /login
+       method: POST
+       data:
+         loginName: admin
+         loginPassword: Dmall@1234
+         retailId: ${Vc_Login_Bf()}
+       headers:
+         Content-Type: application/x-www-form-urlencoded;charset=UTF-8
+         User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36
+                    (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+         Referer: http://testdf-vc.dmall.com.hk
+    validate:
+    - eq:  [status_code,200]
+    - eq:  [content.code,0]
+
+
+#- test:
+#    name: 登录成功后进行查询操作
+#    request:
+#      url: /tsysSystem/list
+#      method: POST
+#      data:
+#        systemName: ""
+#        currentPage: 1
+#        pageSize: 20
+#      headers:
+#        Content-Type: application/x-www-form-urlencoded;charset=UTF-8
+#        User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36
+#                    (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+#        Referer: http://testdf-vc.dmall.com.hk
+#        Cookie: ${VC_Login()}
+#
+#    validate:
+#    - eq: [status_code,200]
+#    - eq: [content.code,0]
+
+
+

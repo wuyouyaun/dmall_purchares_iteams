@@ -1,0 +1,1 @@
+DEBUG    api:annuals_contract.py:49 返回日志：{'success': True, 'errorMsg': None, 'errorCode': None, 'data': {'draftCount': 0, 'auditingCount': 0, 'effectiveCount': 0, 'pageSize': 20, 'pageNo': 1, 'totalCount': 0, 'pagedList': {'pageSize': 20, 'pageNum': 1, 'totalCount': -1, 'pageCount': 1, 'list': []}}}

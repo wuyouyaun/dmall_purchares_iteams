@@ -1,0 +1,1 @@
+DEBUG    api:annuals_contract.py:64 返回日志：{'success': False, 'errorMsg': '合同編號不能為空', 'errorCode': '10000', 'data': None}

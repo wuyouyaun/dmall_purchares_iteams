@@ -1,0 +1,11 @@
+2020-07-27 11:55:11 - api - "D:/Dmall_project/common/test_log.py:9" - <module> - DEBUG - ---info----
+
+2020-07-27 11:56:28 - api - "D:/Dmall_project/common/test_log.py:9" - <module> - DEBUG - ---debug----
+2020-07-27 11:56:28 - api - "D:/Dmall_project/common/test_log.py:10" - <module> - INFO - ---info---
+2020-07-27 11:56:28 - api - "D:/Dmall_project/common/test_log.py:11" - <module> - ERROR - ---error---
+
+2020-07-27 11:57:07 - api - "D:/Dmall_project/common/test_log.py:9" - <module> - DEBUG - ---debug----
+2020-07-27 11:57:07 - api - "D:/Dmall_project/common/test_log.py:10" - <module> - INFO - ---info---
+2020-07-27 11:57:07 - api - "D:/Dmall_project/common/test_log.py:11" - <module> - WARNING - ---warning---
+2020-07-27 11:57:07 - api - "D:/Dmall_project/common/test_log.py:12" - <module> - ERROR - ---error---
+

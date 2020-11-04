@@ -1,0 +1,1 @@
+DEBUG    api:supplier.py:43 返回日志：{'code': 0, 'data': {'basicAccount': '銀行基本戶帳號不能為空', 'taxpayerNumber': '納稅識別號不能為空'}, 'message': None, 'succ': True}

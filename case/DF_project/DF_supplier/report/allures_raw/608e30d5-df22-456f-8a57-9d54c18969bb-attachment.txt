@@ -1,0 +1,4 @@
+[0;32m2020-11-02 14:49:41 - api - "D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:43" - save_supplier_information - DEBUG -  返回日志：{'code': 0, 'data': {'basicAccount': '銀行基本戶帳號不能為空'}, 'message': None, 'succ': True}[0m
+[0;34m14:49:41  "D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:72"   1234444 
+ [0m[0;34m14:49:41  "D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:73"   True 
+ [0m

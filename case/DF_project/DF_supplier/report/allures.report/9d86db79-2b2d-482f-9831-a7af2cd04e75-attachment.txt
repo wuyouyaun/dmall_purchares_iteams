@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+ 
+  File "d:\python3\lib\site-packages\urllib3\connectionpool.py", line 446, in _make_request
+    assert_header_parsing(httplib_response.msg)
+ 
+  File "d:\python3\lib\site-packages\urllib3\util\response.py", line 71, in assert_header_parsing
+    raise HeaderParsingError(defects=defects, unparsed_data=unparsed_data)
+ 
+urllib3.exceptions.HeaderParsingError: [NoBoundaryInMultipartDefect(), MultipartInvariantViolationDefect()], unparsed data: ''
+ 
+Traceback (most recent call last):
+ 
+  File "d:\python3\lib\site-packages\urllib3\connectionpool.py", line 446, in _make_request
+    assert_header_parsing(httplib_response.msg)
+ 
+  File "d:\python3\lib\site-packages\urllib3\util\response.py", line 71, in assert_header_parsing
+    raise HeaderParsingError(defects=defects, unparsed_data=unparsed_data)
+ 
+urllib3.exceptions.HeaderParsingError: [NoBoundaryInMultipartDefect(), MultipartInvariantViolationDefect()], unparsed data: ''
+ 

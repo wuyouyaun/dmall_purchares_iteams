@@ -1,0 +1,1 @@
+DEBUG    api:supplier.py:41 返回日志：{'code': 0, 'data': {'companyName': '公司名稱+銀行開戶名+銀行賬號重復,不允許新建公司信息'}, 'message': None, 'succ': True}

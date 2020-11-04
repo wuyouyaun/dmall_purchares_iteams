@@ -1,0 +1,2 @@
+DEBUG    api:supplier.py:297 返回日志：{'code': 0, 'data': '操作成功', 'message': None, 'succ': True}
+DEBUG    api:supplier.py:316 返回日志：{'code': 100, 'data': None, 'message': '網絡異常，請聯系系統管理員', 'succ': False}

@@ -1,0 +1,27 @@
+
+
+#- a
+#- b
+#- c
+#- d
+#- 123
+#- 12.34
+#- 0
+
+- user: admin
+  psw: "123456"
+- username: admin
+  psw: "123456"
+  mail: 353558733@qq.com
+  bool: true
+  bool2: false            #布尔值为小写的true,false,读取后成为大写的True,Flase
+- user: admin1
+  psw: "123456a"
+  mail: 123@qq.com         # 一个文件只能是一种结构，一种对象类型
+  bool3: ture
+  none: ~             # none为~，读取后为None
+
+
+
+#testl_business:
+#- [test1: "wuyy",psw: "12345a"]

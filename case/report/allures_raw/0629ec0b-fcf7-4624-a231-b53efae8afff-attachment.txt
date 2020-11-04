@@ -1,0 +1,2 @@
+[0;34m15:51:11  "D:\Dmall_project\case\VC_project\Annual_contract\test_annual_contract.py:281"   time.struct_time(tm_year=2020, tm_mon=8, tm_mday=1, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=214, tm_isdst=-1) 
+ [0m

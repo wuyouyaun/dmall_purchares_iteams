@@ -1,0 +1,1 @@
+[0;32m2020-11-02 18:51:53 - api - "D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:43" - save_supplier_information - DEBUG -  返回日志：{'code': 0, 'data': 11079, 'message': None, 'succ': True}[0m

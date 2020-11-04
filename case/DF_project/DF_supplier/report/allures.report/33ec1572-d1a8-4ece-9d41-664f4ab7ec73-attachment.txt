@@ -1,0 +1,2 @@
+[0;34m10:59:02  "D:\Dmall_project\case\DF_project\df_testlogin.py:37"   <Response [200]> 
+ [0m[0;32m2020-11-04 10:59:02 - api - "D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:190" - find_supplier_infor - DEBUG -  返回日志：{'code': 100, 'data': None, 'message': '網絡異常，請聯系系統管理員', 'succ': False}[0m

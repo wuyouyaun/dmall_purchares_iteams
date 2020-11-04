@@ -1,0 +1,3 @@
+[0;34m15:51:15  "D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:51"   D:\Dmall_project\case\VC_project\Supplier_vc 
+ [0m[0;34m15:51:15  "D:\Dmall_project\case\VC_project\Supplier_vc\supplier_port.py:53"   D:\Dmall_project\case\VC_project\Supplier_vc\ces.png 
+ [0m

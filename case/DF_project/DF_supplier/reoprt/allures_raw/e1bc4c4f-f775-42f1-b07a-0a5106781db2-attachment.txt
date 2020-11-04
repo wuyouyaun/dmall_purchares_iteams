@@ -1,0 +1,1 @@
+DEBUG    api:supplier.py:41 返回日志：{'code': 0, 'data': 10875, 'message': None, 'succ': True}

@@ -1,0 +1,5 @@
+[0;34m14:49:40  "D:\Dmall_project\case\DF_project\df_testlogin.py:37"   <Response [200]> 
+ [0m[0;34m14:49:40  "D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:11"   1111 
+ [0m[0;34m14:49:40  "D:\Dmall_project\case\DF_project\DF_supplier\conftest.py:12"   后置操作 
+ [0m[0;34m14:49:40  "D:\Dmall_project\case\DF_project\df_testlogin.py:37"   <Response [200]> 
+ [0m[0;32m2020-11-02 14:49:41 - api - "D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:43" - save_supplier_information - DEBUG -  返回日志：{'code': 0, 'data': 10974, 'message': None, 'succ': True}[0m

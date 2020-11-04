@@ -1,0 +1,2 @@
+[0;34m15:08:48  "D:\Dmall_project\case\DF_project\df_testlogin.py:37"   <Response [200]> 
+ [0m[0;32m2020-11-02 15:08:48 - api - "D:\Dmall_project\case\DF_project\DF_supplier\supplier.py:187" - find_supplier_infor - DEBUG -  返回日志：{'code': 0, 'data': {'pageSize': 20, 'pageNum': 3, 'totalCount': 5, 'pageCount': 1, 'list': []}, 'message': None, 'succ': True}[0m

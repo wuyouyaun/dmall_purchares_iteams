@@ -1,0 +1,778 @@
+<head>
+  <meta content="text/html; charset=utf-8" http-equiv="content-type" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> - TestReport</title>
+  <style>
+    body {
+      background-color: #f2f2f2;
+      color: #333;
+      margin: 0 auto;
+      width: 960px;
+    }
+    #summary {
+      width: 960px;
+      margin-bottom: 20px;
+    }
+    #summary th {
+      background-color: skyblue;
+      padding: 5px 12px;
+    }
+    #summary td {
+      background-color: lightblue;
+      text-align: center;
+      padding: 4px 8px;
+    }
+    .details {
+      width: 960px;
+      margin-bottom: 20px;
+    }
+    .details th {
+      background-color: skyblue;
+      padding: 5px 12px;
+    }
+    .details tr .passed {
+      background-color: lightgreen;
+    }
+    .details tr .failed {
+      background-color: red;
+    }
+    .details tr .unchecked {
+      background-color: gray;
+    }
+    .details td {
+      background-color: lightblue;
+      padding: 5px 12px;
+    }
+    .details .detail {
+      background-color: lightgrey;
+      font-size: smaller;
+      padding: 5px 10px;
+      text-align: center;
+    }
+    .details .success {
+      background-color: greenyellow;
+    }
+    .details .error {
+      background-color: red;
+    }
+    .details .failure {
+      background-color: salmon;
+    }
+    .details .skipped {
+      background-color: gray;
+    }
+
+    .button {
+      font-size: 1em;
+      padding: 6px;
+      width: 4em;
+      text-align: center;
+      background-color: #06d85f;
+      border-radius: 20px/50px;
+      cursor: pointer;
+      transition: all 0.3s ease-out;
+    }
+    a.button{
+      color: gray;
+      text-decoration: none;
+    }
+    .button:hover {
+      background: #2cffbd;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.7);
+      transition: opacity 500ms;
+      visibility: hidden;
+      opacity: 0;
+    }
+    .overlay:target {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .popup {
+      margin: 70px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 10px;
+      width: 50%;
+      position: relative;
+      transition: all 3s ease-in-out;
+    }
+
+    .popup h2 {
+      margin-top: 0;
+      color: #333;
+      font-family: Tahoma, Arial, sans-serif;
+    }
+    .popup .close {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      transition: all 200ms;
+      font-size: 30px;
+      font-weight: bold;
+      text-decoration: none;
+      color: #333;
+    }
+    .popup .close:hover {
+      color: #06d85f;
+    }
+    .popup .content {
+      max-height: 80%;
+      overflow: auto;
+      text-align: left;
+    }
+
+    @media screen and (max-width: 700px) {
+      .box {
+        width: 70%;
+      }
+      .popup {
+        width: 70%;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+  <h1>Test Report: </h1>
+
+  <h2>Summary</h2>
+  <table id="summary">
+
+    <tr>
+      <th>START AT</th>
+      <td colspan="4">2020-07-27 20:38:34</td>
+    </tr>
+    <tr>
+      <th>DURATION</th>
+      <td colspan="4">0.043 seconds</td>
+    </tr>
+    <tr>
+      <th>PLATFORM</th>
+      <td>HttpRunner 1.5.8 </td>
+      <td>CPython 3.6.0 </td>
+      <td colspan="2">Windows-10-10.0.18362-SP0</td>
+    </tr>
+    <tr>
+      <th>TOTAL</th>
+      <th>SUCCESS</th>
+      <th>FAILED</th>
+      <th>ERROR</th>
+      <th>SKIPPED</th>
+      <!-- <th>ExpectedFailure</th>
+      <th>UnexpectedSuccess</th> -->
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <!-- <td>0</td>
+      <td>0</td> -->
+    </tr>
+  </table>
+
+  <h2>Details</h2>
+
+  
+  
+  <h3>用例描述demo</h3>
+  <table id="suite_1" class="details">
+    <tr>
+      <th>base_url</th>
+      <td colspan="2"></td>
+      <th colspan="2" class="detail">
+        <a class="button" href="#suite_output_1">parameters & output</a>
+        <div id="suite_output_1" class="overlay">
+            <div class="popup">
+                <h2>Parameters and Output</h2>
+                <a class="close" href="#suite_1">&times;</a>
+                <div class="content">
+                  <div style="overflow: auto">
+                      <table>
+                        <tr>
+                          <th>variables</th>
+                          <th>output</th>
+                        </tr>
+                        
+                      </table>
+                  </div>
+                </div>
+            </div>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td>TOTAL: 1</td>
+      <td>SUCCESS: 1</td>
+      <td>FAILED: 0</td>
+      <td>ERROR: 0</td>
+      <td>SKIPPED: 0</td>
+    </tr>
+    <tr>
+      <th>Status</th>
+      <th colspan="2">Name</th>
+      <th>Response Time</th>
+      <th>Detail</th>
+    </tr>
+
+    
+    
+    <tr id="record_1_1">
+      <th class="success" style="width:5em;">success</td>
+      <td colspan="2">测试用例，或者步骤，描述</td>
+      <td style="text-align:center;width:6em;">37.9 ms</td>
+      <td class="detail">
+
+        <a class="button" href="#popup_log_1_1">log</a>
+        <div id="popup_log_1_1" class="overlay">
+          <div class="popup">
+            <h2>Request and Response data</h2>
+            <a class="close" href="#record_1_1">&times;</a>
+
+            <div class="content">
+              <h3>Request:</h3>
+              <div style="overflow: auto">
+                <table>
+                  
+                    <tr>
+                      <th>url</th>
+                      <td>
+                        
+                          http://8.129.172.40:8888/api/login/
+                        
+                      </td>
+                    </tr>
+                  
+                    <tr>
+                      <th>method</th>
+                      <td>
+                        
+                          POST
+                        
+                      </td>
+                    </tr>
+                  
+                    <tr>
+                      <th>headers</th>
+                      <td>
+                        
+                          
+                          <div>
+                            <strong>User-Agent</strong>: python-requests/2.24.0
+                          </div>
+                          
+                          <div>
+                            <strong>Accept-Encoding</strong>: gzip, deflate
+                          </div>
+                          
+                          <div>
+                            <strong>Accept</strong>: */*
+                          </div>
+                          
+                          <div>
+                            <strong>Connection</strong>: keep-alive
+                          </div>
+                          
+                          <div>
+                            <strong>Content-Length</strong>: 0
+                          </div>
+                          
+                        
+                      </td>
+                    </tr>
+                  
+                    <tr>
+                      <th>start_timestamp</th>
+                      <td>
+                        
+                          1595853514.880048
+                        
+                      </td>
+                    </tr>
+                  
+                    <tr>
+                      <th>body</th>
+                      <td>
+                        
+                          None
+                        
+                      </td>
+                    </tr>
+                  
+                </table>
+              </div>
+
+              <h3>Response:</h3>
+              <div style="overflow: auto">
+                <table>
+                    
+                      <tr>
+                        <th>status_code</th>
+                        <td>
+                          
+                            200
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>headers</th>
+                        <td>
+                          
+                            
+                            <div>
+                              <strong>User-Agent</strong>: python-requests/2.24.0
+                            </div>
+                            
+                            <div>
+                              <strong>Accept-Encoding</strong>: gzip, deflate
+                            </div>
+                            
+                            <div>
+                              <strong>Accept</strong>: */*
+                            </div>
+                            
+                            <div>
+                              <strong>Connection</strong>: keep-alive
+                            </div>
+                            
+                            <div>
+                              <strong>Content-Length</strong>: 0
+                            </div>
+                            
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>content_size</th>
+                        <td>
+                          
+                            3876
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>response_time_ms</th>
+                        <td>
+                          
+                            37.9
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>elapsed_ms</th>
+                        <td>
+                          
+                            35.518
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>encoding</th>
+                        <td>
+                          
+                            utf-8
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>content</th>
+                        <td>
+                          
+                            &lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    
+    &lt;meta http-equiv=&#34;Content-Type&#34; content=&#34;text/html; charset=utf-8&#34;/&gt;
+    &lt;title&gt;登录&lt;/title&gt;
+    &lt;meta name=&#34;viewport&#34; content=&#34;width=device-width,initial-scale=1.0,user-scalable=no&#34;&gt;
+    &lt;link rel=&#34;stylesheet&#34; href=&#34;https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css&#34;&gt;
+    &lt;link href=&#34;/static/assets/iconfont/style.css&#34; type=&#34;text/css&#34; rel=&#34;stylesheet&#34;&gt;
+
+    &lt;style&gt;
+        body {
+            color: #fff;
+            font-family: &#34;微软雅黑&#34;;
+            font-size: 14px;
+        }
+
+        .wrap1 {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            margin: auto
+        }
+
+        /*把整个屏幕真正撑开--而且能自己实现居中*/
+        .main_content {
+            background: url(/static/assets/img/main_bg.png) repeat;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: left;
+            float: none;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .login_btn {
+            display: block;
+            background: #3872f6;
+            color: #fff;
+            font-size: 15px;
+            width: 100%;
+            line-height: 50px;
+            border-radius: 3px;
+            border: none;
+        }
+
+        .login_input {
+            width: 100%;
+            border: 1px solid #3872f6;
+            border-radius: 3px;
+            line-height: 40px;
+            padding: 2px 5px 2px 30px;
+            background: none;
+        }
+
+        .icon_font {
+            position: absolute;
+            bottom: 15px;
+            left: 10px;
+            font-size: 18px;
+            color: #3872f6;
+        }
+
+        .font16 {
+            font-size: 16px;
+        }
+
+        .mg-t20 {
+            margin-top: 20px;
+        }
+
+        @media (min-width: 200px) {
+            .pd-xs-20 {
+                padding: 20px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .pd-sm-50 {
+                padding: 50px;
+            }
+        }
+
+        #grad {
+            background: -webkit-linear-gradient(#4990c1, #52a3d2, #6186a3); /* Safari 5.1 - 6.0 */
+            background: -o-linear-gradient(#4990c1, #52a3d2, #6186a3); /* Opera 11.1 - 12.0 */
+            background: -moz-linear-gradient(#4990c1, #52a3d2, #6186a3); /* Firefox 3.6 - 15 */
+            background: linear-gradient(#4990c1, #52a3d2, #6186a3); /* 标准的语法 */
+        }
+    &lt;/style&gt;
+
+&lt;/head&gt;
+
+&lt;body style=&#34;background:url(/static/assets/img/bg.jpg) no-repeat;&#34;&gt;
+
+&lt;div class=&#34;container wrap1&#34; style=&#34;height:450px;&#34;&gt;
+    &lt;h2 class=&#34;mg-b20 text-center&#34;&gt;Welcome to HttpRunnerManager&lt;/h2&gt;
+    &lt;div class=&#34;col-sm-8 col-md-5 center-auto pd-sm-50 pd-xs-20 main_content&#34;&gt;
+        &lt;p class=&#34;text-center font16&#34;&gt;用户登录&lt;/p&gt;
+        &lt;form action=&#34;/api/login/&#34; role=&#34;form&#34; method=&#34;POST&#34; id=&#34;login_form&#34;&gt;
+            &lt;div class=&#34;form-group mg-t20&#34;&gt;
+                &lt;i class=&#34;icon-user icon_font&#34;&gt;&lt;/i&gt;
+                &lt;input type=&#34;text&#34; class=&#34;login_input&#34; name=&#34;account&#34; id=&#34;account&#34; placeholder=&#34;请输入用户名&#34;/&gt;
+            &lt;/div&gt;
+            &lt;div class=&#34;form-group mg-t20&#34;&gt;
+                &lt;i class=&#34;icon-lock icon_font&#34;&gt;&lt;/i&gt;
+                &lt;input type=&#34;password&#34; class=&#34;login_input&#34; name=&#34;password&#34; id=&#34;password&#34; placeholder=&#34;请输入密码&#34;/&gt;
+            &lt;/div&gt;
+            &lt;div class=&#34;checkbox mg-b25&#34;&gt;
+                &lt;label&gt;
+                    &lt;input type=&#34;checkbox&#34;/&gt;记住我的登录信息
+                &lt;/label&gt;
+                &lt;a style=&#34;margin-left: 110px&#34; href=&#34;/api/register/&#34;&gt;没有账号？点击注册&lt;/a&gt;
+            &lt;/div&gt;
+            &lt;button class=&#34;login_btn&#34; id=&#34;login_submit&#34; value=&#34;Login&#34; type=&#34;submit&#34;&gt;登 录&lt;/button&gt;
+        &lt;/form&gt;
+
+    &lt;/div&gt;&lt;!--row end--&gt;
+&lt;/div&gt;&lt;!--container end--&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>content_type</th>
+                        <td>
+                          
+                            
+                              <pre></pre>
+                            
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>ok</th>
+                        <td>
+                          
+                            True
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>url</th>
+                        <td>
+                          
+                            http://8.129.172.40:8888/api/login/
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>reason</th>
+                        <td>
+                          
+                            OK
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>cookies</th>
+                        <td>
+                          
+                            <RequestsCookieJar[<Cookie sessionid=4ne4phriikukuz263gwotvosrabuekc6 for 8.129.172.40/>]>
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>text</th>
+                        <td>
+                          
+                            <!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>登录</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link href="/static/assets/iconfont/style.css" type="text/css" rel="stylesheet">
+
+    <style>
+        body {
+            color: #fff;
+            font-family: "微软雅黑";
+            font-size: 14px;
+        }
+
+        .wrap1 {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            margin: auto
+        }
+
+        /*把整个屏幕真正撑开--而且能自己实现居中*/
+        .main_content {
+            background: url(/static/assets/img/main_bg.png) repeat;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: left;
+            float: none;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .login_btn {
+            display: block;
+            background: #3872f6;
+            color: #fff;
+            font-size: 15px;
+            width: 100%;
+            line-height: 50px;
+            border-radius: 3px;
+            border: none;
+        }
+
+        .login_input {
+            width: 100%;
+            border: 1px solid #3872f6;
+            border-radius: 3px;
+            line-height: 40px;
+            padding: 2px 5px 2px 30px;
+            background: none;
+        }
+
+        .icon_font {
+            position: absolute;
+            bottom: 15px;
+            left: 10px;
+            font-size: 18px;
+            color: #3872f6;
+        }
+
+        .font16 {
+            font-size: 16px;
+        }
+
+        .mg-t20 {
+            margin-top: 20px;
+        }
+
+        @media (min-width: 200px) {
+            .pd-xs-20 {
+                padding: 20px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .pd-sm-50 {
+                padding: 50px;
+            }
+        }
+
+        #grad {
+            background: -webkit-linear-gradient(#4990c1, #52a3d2, #6186a3); /* Safari 5.1 - 6.0 */
+            background: -o-linear-gradient(#4990c1, #52a3d2, #6186a3); /* Opera 11.1 - 12.0 */
+            background: -moz-linear-gradient(#4990c1, #52a3d2, #6186a3); /* Firefox 3.6 - 15 */
+            background: linear-gradient(#4990c1, #52a3d2, #6186a3); /* 标准的语法 */
+        }
+    </style>
+
+</head>
+
+<body style="background:url(/static/assets/img/bg.jpg) no-repeat;">
+
+<div class="container wrap1" style="height:450px;">
+    <h2 class="mg-b20 text-center">Welcome to HttpRunnerManager</h2>
+    <div class="col-sm-8 col-md-5 center-auto pd-sm-50 pd-xs-20 main_content">
+        <p class="text-center font16">用户登录</p>
+        <form action="/api/login/" role="form" method="POST" id="login_form">
+            <div class="form-group mg-t20">
+                <i class="icon-user icon_font"></i>
+                <input type="text" class="login_input" name="account" id="account" placeholder="请输入用户名"/>
+            </div>
+            <div class="form-group mg-t20">
+                <i class="icon-lock icon_font"></i>
+                <input type="password" class="login_input" name="password" id="password" placeholder="请输入密码"/>
+            </div>
+            <div class="checkbox mg-b25">
+                <label>
+                    <input type="checkbox"/>记住我的登录信息
+                </label>
+                <a style="margin-left: 110px" href="/api/register/">没有账号？点击注册</a>
+            </div>
+            <button class="login_btn" id="login_submit" value="Login" type="submit">登 录</button>
+        </form>
+
+    </div><!--row end-->
+</div><!--container end-->
+
+</body>
+</html>
+
+                          
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <th>json</th>
+                        <td>
+                          
+                            None
+                          
+                        </td>
+                      </tr>
+                    
+                  </table>
+              </div>
+
+              <h3>Validators:</h3>
+              <div style="overflow: auto">
+                  <table>
+                    <tr>
+                      <th>check</th>
+                      <th>comparator</th>
+                      <th>expect value</th>
+                      <th>actual value</th>
+                    </tr>
+                    
+                    <tr>
+                      
+                      <td class="passed">
+                      
+                        status_code
+                      </td>
+                      <td>eq</td>
+                      <td>200</td>
+                      <td>200</td>
+                    </tr>
+                    
+                  </table>
+              </div>
+
+              <h3>Statistics:</h3>
+              <div style="overflow: auto">
+                <table>
+                  <tr>
+                      <th>content_size(bytes)</th>
+                      <td>3876</td>
+                    </tr>
+                  <tr>
+                    <th>response_time(ms)</th>
+                    <td>37.9</td>
+                  </tr>
+                  <tr>
+                    <th>elapsed(ms)</th>
+                    <td>35.518</td>
+                  </tr>
+                </table>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        
+
+      </td>
+    </tr>
+  
+  </table>
+  
+</body>

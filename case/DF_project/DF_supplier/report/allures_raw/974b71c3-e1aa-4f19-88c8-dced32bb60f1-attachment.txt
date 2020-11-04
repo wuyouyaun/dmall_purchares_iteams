@@ -1,0 +1,1 @@
+DEBUG    api:supplier.py:187 返回日志：{'code': 0, 'data': {'pageSize': 50, 'pageNum': 5, 'totalCount': 5, 'pageCount': 1, 'list': []}, 'message': None, 'succ': True}

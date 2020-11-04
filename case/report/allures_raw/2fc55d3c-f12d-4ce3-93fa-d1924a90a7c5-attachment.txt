@@ -1,0 +1,3 @@
+[0;34m15:50:44  "D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:73"   1234444 
+ [0m[0;34m15:50:44  "D:\Dmall_project\case\DF_project\DF_supplier\test_supplier.py:74"   True 
+ [0m
